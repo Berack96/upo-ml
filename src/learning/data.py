@@ -10,13 +10,16 @@ class Dataset:
         # move target to the start
         col_target = data.pop(target)
         data.insert(0, target, col_target)
+        data.insert(1, "Bias", 1.0)
 
+        self.original = data
         self.data = data
         self.target = target
         self.classification = (data[target].dtype == object)
 
     def regularize(self, excepts:list=[]) -> Self:
         excepts.append(self.target)
+        excepts.append("Bias")
         for col in self.data:
             if col not in excepts:
                 dt = self.data[col]
@@ -44,10 +47,11 @@ class Dataset:
         self.data = self.data.sample(frac=1)
         return self
 
-    def as_ndarray(self, bias=True):
-        data = self.data.copy()
-        if bias: data.insert(1, "Bias", 1.0)
-        return data.to_numpy()
+    def as_ndarray(self) -> np.ndarray:
+        return self.data.to_numpy()
+
+    def get_index(self, column:str) -> int:
+        return self.data.columns.get_loc(column)
 
 class PrincipalComponentAnalisys:
     def __init__(self, data:np.ndarray) -> None:
