@@ -17,24 +17,25 @@ class Dataset:
         self.target = target
         self.classification = (data[target].dtype == object)
 
-    def regularize(self, excepts:list=[]) -> Self:
+    def regularize(self, excepts:list[str]=[]) -> Self:
         excepts.append(self.target)
         excepts.append("Bias")
         for col in self.data:
             if col not in excepts:
-                dt = self.data[col]
-                self.data[col] = (dt - dt.mean()) / dt.std()
+                datacol = self.data[col]
+                datacol = (datacol - datacol.mean()) / datacol.std()
+                self.data[col] = datacol
         return self
 
-    def factorize(self, columns:list=[]) -> Self:
+    def factorize(self, columns:list[str]=[]) -> Self:
         data = self.data
         for col in columns:
             data[col] = pd.factorize(data[col])[0]
         return self
 
-    def to_numbers(self, columns:list=[]) -> Self:
+    def to_numbers(self, columns:list[str]=[]) -> Self:
         data = self.data
-        for col in self.data.columns:
+        for col in columns:
             if data[col].dtype == object:
                 data[col] = pd.to_numeric(data[col], errors='coerce')
         return self
@@ -64,3 +65,13 @@ class PrincipalComponentAnalisys:
         if threshold <= 0 or threshold > 1:
             threshold = 1
 
+
+
+if __name__ == "__main__":
+    df = Dataset("datasets\\regression\\automobile.csv", "symboling")
+    attributes_to_modify = ["fuel-system", "engine-type", "drive-wheels", "body-style", "make", "engine-location", "aspiration", "fuel-type", "num-of-cylinders", "num-of-doors"]
+    df.factorize(attributes_to_modify)
+    df.to_numbers(["normalized-losses", "bore", "stroke", "horsepower", "peak-rpm", "price"])
+    df.handle_na()
+    df.regularize(excepts=attributes_to_modify)
+    print(df.data.dtypes)

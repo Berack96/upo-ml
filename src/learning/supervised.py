@@ -1,10 +1,10 @@
 import math as math
 import numpy as np
 
-from ml import MLAlgorithm
+from learning.ml import MLRegression
 from learning.data import Dataset
 
-class LinearRegression(MLAlgorithm):
+class LinearRegression(MLRegression):
     def __init__(self, dataset:Dataset, learning_rate:float=0.1) -> None:
         self._set_dataset(dataset)
 
