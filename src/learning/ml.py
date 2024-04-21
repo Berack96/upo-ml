@@ -29,15 +29,25 @@ class MLAlgorithm(ABC):
         return (x, y, m)
 
     def learn(self, times:int) -> tuple[list, list]:
+        _, train, test = self.learn_until(times)
+        return (train, test)
+
+    def learn_until(self, max_iter:int=1000000, delta:float=0.0) -> tuple[int, list, list]:
         train = []
         test = []
-        for _ in range(0, max(1, times)):
+        prev = None
+        count = 0
+
+        while count < max_iter and (prev == None or prev - train[-1] > delta):
+            count += 1
+            prev = train[-1] if len(train) > 0 else None
+
             train.append(self.learning_step())
             test.append(self.test_error())
 
         self.train_error = train
         self.test_error = test
-        return (train, test)
+        return (count, train, test)
 
     @abstractmethod
     def learning_step(self) -> float:
@@ -55,6 +65,6 @@ class MLAlgorithm(ABC):
 class MLRegression(MLAlgorithm):
     def plot(self, skip:int=1000) -> None:
         plot = Plot("Error", "Time", "Mean Error")
-        plot.line("training", "red", data=self.train_error[skip:])
-        plot.line("test", "blue", data=self.test_error[skip:])
+        plot.line("training", "blue", data=self.train_error[skip:])
+        plot.line("test", "red", data=self.test_error[skip:])
         plot.wait()

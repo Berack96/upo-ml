@@ -22,9 +22,10 @@ class Dataset:
         excepts.append("Bias")
         for col in self.data:
             if col not in excepts:
-                datacol = self.data[col]
+                index = self.data.columns.get_loc(col)
+                datacol = self.data.pop(col)
                 datacol = (datacol - datacol.mean()) / datacol.std()
-                self.data[col] = datacol
+                self.data.insert(index, col, datacol)
         return self
 
     def factorize(self, columns:list[str]=[]) -> Self:

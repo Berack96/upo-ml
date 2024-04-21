@@ -2,16 +2,15 @@ from learning.data import Dataset
 from learning.supervised import LinearRegression
 from learning.ml import MLRegression
 
-def auto_mpg() -> MLRegression:
+def auto_mpg() -> tuple[int, int, MLRegression]:
     df = Dataset("datasets\\auto-mpg.csv", "MPG")
 
     df.to_numbers(["HP"])
     df.handle_na()
     df.regularize(excepts=["Cylinders","Year","Origin"])
+    return (5000, 1000, LinearRegression(df, learning_rate=0.0001))
 
-    return LinearRegression(df, learning_rate=0.0001)
-
-def automobile() -> MLRegression:
+def automobile() -> tuple[int, int, MLRegression]:
     df = Dataset("datasets\\regression\\automobile.csv", "symboling")
 
     attributes_to_modify = ["fuel-system", "engine-type", "drive-wheels", "body-style", "make", "engine-location", "aspiration", "fuel-type", "num-of-cylinders", "num-of-doors"]
@@ -19,14 +18,16 @@ def automobile() -> MLRegression:
     df.to_numbers(["normalized-losses", "bore", "stroke", "horsepower", "peak-rpm", "price"])
     df.handle_na()
     df.regularize(excepts=attributes_to_modify)
+    return (5000, 1000, LinearRegression(df, learning_rate=0.002))
 
-    return LinearRegression(df, learning_rate=0.001)
+def power_plant() -> tuple[int, int, MLRegression]:
+    df = Dataset("datasets\\regression\\power-plant.csv", "energy-output")
+    df.regularize()
+    return (1000, 80, LinearRegression(df, learning_rate=0.1))
 
-
-epoch = 15000
-ml = automobile()
+epoch, skip, ml = automobile()
 ml.learn(epoch)
-ml.plot()
+ml.plot(skip=skip)
 
 """
 for _ in range(0, epoch):
