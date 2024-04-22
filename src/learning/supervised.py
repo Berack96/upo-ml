@@ -1,7 +1,7 @@
 import math as math
 import numpy as np
 
-from learning.ml import MLRegression
+from learning.ml import MLRegression, MLClassification
 from learning.data import Dataset
 
 class LinearRegression(MLRegression):
@@ -36,3 +36,7 @@ class LinearRegression(MLRegression):
 
     def set_parameters(self, parameters):
         self.theta = parameters
+
+
+class LogisticRegression(MLClassification):
+    pass

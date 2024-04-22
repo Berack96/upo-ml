@@ -77,18 +77,24 @@ class MLAlgorithm(ABC):
     @abstractmethod
     def predict_loss(self, dataset:np.ndarray) -> float: pass
     @abstractmethod
-    def plot(self, skip:int=1000) -> None: pass
-    @abstractmethod
     def get_parameters(self): pass
     @abstractmethod
     def set_parameters(self, parameters): pass
 
-
-
-class MLRegression(MLAlgorithm):
+    @abstractmethod
     def plot(self, skip:int=1000) -> None:
         skip = skip if len(self._train_loss) > skip else 0
-        plot = Plot("Error", "Time", "Mean Error")
+        plot = Plot("Loss", "Time", "Mean Loss")
         plot.line("training", "blue", data=self._train_loss[skip:])
         plot.line("validation", "red", data=self._valid_loss[skip:])
         plot.wait()
+
+
+
+class MLRegression(MLAlgorithm):
+    def plot(self, skip: int = 1000) -> None:
+        return super().plot(skip)
+
+class MLClassification(MLAlgorithm):
+    def plot(self, skip: int = 1000) -> None:
+        return super().plot(skip)

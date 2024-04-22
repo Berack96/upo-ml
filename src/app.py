@@ -42,4 +42,4 @@ def learn_dataset(function:Callable[..., tuple[int, MLRegression]], epochs:int=1
 
 
 if __name__ == "__main__":
-    learn_dataset(auto_mpg)
+    learn_dataset(automobile)
