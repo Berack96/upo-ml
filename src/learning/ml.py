@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from learning.data import Dataset
 from plot import Plot
+from tqdm import tqdm
 
 import numpy as np
 
@@ -11,16 +12,18 @@ class MLAlgorithm(ABC):
     dataset: Dataset
     testset: np.ndarray
     learnset: np.ndarray
-    test_error: list[float]
-    train_error: list[float]
+    _valid_loss: list[float]
+    _train_loss: list[float]
 
     def _set_dataset(self, dataset:Dataset, split:float=0.2):
         ndarray = dataset.shuffle().as_ndarray()
-        split = int(ndarray.shape[0] * split)
+        splitT = int(ndarray.shape[0] * split)
+        splitV = int(splitT / 2)
 
         self.dataset = dataset
-        self.testset = ndarray[split:]
-        self.learnset = ndarray[:split]
+        self.validset = ndarray[:splitV]
+        self.testset = ndarray[splitV:splitT]
+        self.learnset = ndarray[splitT:]
 
     def _split_data_target(self, dset:np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
         x = np.delete(dset, 0, 1)
@@ -28,43 +31,64 @@ class MLAlgorithm(ABC):
         m = dset.shape[0]
         return (x, y, m)
 
-    def learn(self, times:int) -> tuple[list, list]:
-        _, train, test = self.learn_until(times)
-        return (train, test)
-
-    def learn_until(self, max_iter:int=1000000, delta:float=0.0) -> tuple[int, list, list]:
-        train = []
-        test = []
-        prev = None
+    def learn(self, epochs:int, early_stop:float=0.0000001, max_patience:int=10, verbose:bool=False) -> tuple[int, list, list]:
+        learn = []
+        valid = []
         count = 0
+        patience = 0
+        trange = range(epochs)
+        if verbose: trange = tqdm(trange, bar_format="Epochs {percentage:3.0f}% [{bar}] {elapsed}{postfix}")
 
-        while count < max_iter and (prev == None or prev - train[-1] > delta):
-            count += 1
-            prev = train[-1] if len(train) > 0 else None
+        try:
+            for _ in trange:
+                if count > 1 and valid[-2] - valid[-1] < early_stop:
+                    if patience >= max_patience:
+                        self.set_parameters(backup)
+                        break
+                    patience += 1
+                else:
+                    backup = self.get_parameters()
+                    patience = 0
 
-            train.append(self.learning_step())
-            test.append(self.test_error())
+                count += 1
+                learn.append(self.learning_step())
+                valid.append(self.validation_loss())
 
-        self.train_error = train
-        self.test_error = test
-        return (count, train, test)
+                if verbose: trange.set_postfix({"learn": f"{learn[-1]:2.5f}", "validation": f"{valid[-1]:2.5f}"})
+        except KeyboardInterrupt: pass
+        if verbose: print(f"Loop ended after {count} epochs")
+
+        self._train_loss = learn
+        self._valid_loss = valid
+        return (count, learn, valid)
+
+    def learning_loss(self) -> float:
+        return self.predict_loss(self.learnset)
+
+    def validation_loss(self) -> float:
+        return self.predict_loss(self.validset)
+
+    def test_loss(self) -> float:
+        return self.predict_loss(self.testset)
+
 
     @abstractmethod
-    def learning_step(self) -> float:
-        pass
-
+    def learning_step(self) -> float: pass
     @abstractmethod
-    def test_error(self) -> float:
-        pass
-
+    def predict_loss(self, dataset:np.ndarray) -> float: pass
     @abstractmethod
-    def plot(self, skip:int=1000) -> None:
-        pass
+    def plot(self, skip:int=1000) -> None: pass
+    @abstractmethod
+    def get_parameters(self): pass
+    @abstractmethod
+    def set_parameters(self, parameters): pass
+
 
 
 class MLRegression(MLAlgorithm):
     def plot(self, skip:int=1000) -> None:
+        skip = skip if len(self._train_loss) > skip else 0
         plot = Plot("Error", "Time", "Mean Error")
-        plot.line("training", "blue", data=self.train_error[skip:])
-        plot.line("test", "red", data=self.test_error[skip:])
+        plot.line("training", "blue", data=self._train_loss[skip:])
+        plot.line("validation", "red", data=self._valid_loss[skip:])
         plot.wait()
