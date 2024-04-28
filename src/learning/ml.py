@@ -1,29 +1,27 @@
 from abc import ABC, abstractmethod
-from learning.data import Dataset
 from plot import Plot
 from tqdm import tqdm
 
+import pandas as pd
 import numpy as np
 
 
 class MLAlgorithm(ABC):
     """ Classe generica per gli algoritmi di Machine Learning """
 
-    dataset: Dataset
     testset: np.ndarray
     learnset: np.ndarray
     _valid_loss: list[float]
     _train_loss: list[float]
 
-    def _set_dataset(self, dataset:Dataset, split:float=0.2):
-        ndarray = dataset.shuffle().as_ndarray()
-        splitT = int(ndarray.shape[0] * split)
+    def _set_dataset(self, dataset:np.ndarray, split:float=0.2):
+        splitT = int(dataset.shape[0] * split)
         splitV = int(splitT / 2)
 
-        self.dataset = dataset
-        self.validset = ndarray[:splitV]
-        self.testset = ndarray[splitV:splitT]
-        self.learnset = ndarray[splitT:]
+        np.random.shuffle(dataset)
+        self.validset = dataset[:splitV]
+        self.testset = dataset[splitV:splitT]
+        self.learnset = dataset[splitT:]
 
     def _split_data_target(self, dset:np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
         x = np.delete(dset, 0, 1)
@@ -71,7 +69,32 @@ class MLAlgorithm(ABC):
     def test_loss(self) -> float:
         return self.predict_loss(self.testset)
 
+    def plot(self, skip:int=1000) -> None:
+        skip = skip if len(self._train_loss) > skip else 0
+        plot = Plot("Loss", "Time", "Mean Loss")
+        plot.line("training", "blue", data=self._train_loss[skip:])
+        plot.line("validation", "red", data=self._valid_loss[skip:])
+        plot.wait()
 
+    def confusion_matrix(self, dataset:np.ndarray) -> np.ndarray:
+        x, y, _ = self._split_data_target(dataset)
+        h0 = np.where(self._h0(x) > 0.5, 1, 0)
+
+        classes = len(np.unique(y))
+        conf_matrix = np.zeros((classes, classes), dtype=int)
+
+        for actual, prediction in zip(y, h0):
+            conf_matrix[int(actual), int(prediction)] += 1
+        return conf_matrix
+
+    def accuracy(self, dataset:np.ndarray) -> np.ndarray:
+        conf = self.confusion_matrix(dataset)
+        correct = np.sum(np.diagonal(conf))
+        total = np.sum(conf)
+        return correct / total
+
+    @abstractmethod
+    def _h0(self, x:np.ndarray) -> np.ndarray: pass
     @abstractmethod
     def learning_step(self) -> float: pass
     @abstractmethod
@@ -80,21 +103,3 @@ class MLAlgorithm(ABC):
     def get_parameters(self): pass
     @abstractmethod
     def set_parameters(self, parameters): pass
-
-    @abstractmethod
-    def plot(self, skip:int=1000) -> None:
-        skip = skip if len(self._train_loss) > skip else 0
-        plot = Plot("Loss", "Time", "Mean Loss")
-        plot.line("training", "blue", data=self._train_loss[skip:])
-        plot.line("validation", "red", data=self._valid_loss[skip:])
-        plot.wait()
-
-
-
-class MLRegression(MLAlgorithm):
-    def plot(self, skip: int = 1000) -> None:
-        return super().plot(skip)
-
-class MLClassification(MLAlgorithm):
-    def plot(self, skip: int = 1000) -> None:
-        return super().plot(skip)

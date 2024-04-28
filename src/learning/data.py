@@ -4,7 +4,7 @@ import numpy as np
 from typing_extensions import Self
 
 class Dataset:
-    def __init__(self, csv:str, target:str) -> None:
+    def __init__(self, csv:str, target:str, classification:bool=None) -> None:
         data = pd.read_csv(csv)
 
         # move target to the start
@@ -12,10 +12,18 @@ class Dataset:
         data.insert(0, target, col_target)
         data.insert(1, "Bias", 1.0)
 
+        if classification == None:
+            classification = (data[target].dtype == object)
+
         self.original = data
         self.data = data
         self.target = target
-        self.classification = (data[target].dtype == object)
+        self.classification = classification
+
+    def remove(self, columns:list[str]) -> Self:
+        for col in columns:
+            self.data.pop(col)
+        return self
 
     def regularize(self, excepts:list[str]=[]) -> Self:
         excepts.append(self.target)
