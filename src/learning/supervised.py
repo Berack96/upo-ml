@@ -8,16 +8,21 @@ from learning.data import Dataset, Data
 class GradientDescent(MLAlgorithm):
     theta:np.ndarray
     alpha:float
+    lambd:float
 
-    def __init__(self, dataset:Dataset, learning_rate:float=0.1) -> None:
-        self.__init__(dataset)
+    def __init__(self, dataset:Dataset, learning_rate:float=0.1, regularization:float=0.01) -> None:
+        super().__init__(dataset)
         self.theta = np.random.rand(self.learnset.param)
         self.alpha = max(0, learning_rate)
+        self.lambd = max(0, regularization)
 
     def learning_step(self) -> float:
         x, y, m, _ = self.learnset.as_tuple()
 
-        self.theta -= self.alpha * (1/m) * np.sum((self._h0(x) - y) * x.T, axis=1)
+        regularization = (self.lambd / m) * self.theta
+        regularization[0] = 0
+        derivative = self.alpha * (1/m) * np.sum((self._h0(x) - y) * x.T, axis=1)
+        self.theta -= derivative + regularization
         return self._loss(x, y, m)
 
     def predict_loss(self, dataset:Data) -> float:
@@ -54,5 +59,16 @@ class MultiLayerPerceptron(MLAlgorithm):
     neurons: list[np.ndarray]
 
     def __init__(self, dataset:Dataset, layers:list[int]=[4,3]) -> None:
-        self.__init__(dataset)
+        super().__init__(dataset)
+
+    def _h0(self, x:np.ndarray) -> np.ndarray:
+        pass
+    def learning_step(self) -> float:
+        pass
+    def predict_loss(self, dataset:np.ndarray) -> float:
+        pass
+    def get_parameters(self):
+        pass
+    def set_parameters(self, parameters):
+        pass
 

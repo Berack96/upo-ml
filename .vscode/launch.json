@@ -8,7 +8,7 @@
             "name": "Python Debugger: App",
             "type": "debugpy",
             "request": "launch",
-            "program": "src\\app.py",
+            "program": "src/app.py",
             "console": "integratedTerminal"
         }
     ]
