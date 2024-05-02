@@ -3,27 +3,25 @@ import numpy as np
 
 from abc import abstractmethod
 from learning.ml import MLAlgorithm
+from learning.data import Dataset, Data
 
 class GradientDescent(MLAlgorithm):
     theta:np.ndarray
     alpha:float
 
-    def __init__(self, dataset:np.ndarray, learning_rate:float=0.1) -> None:
-        self._set_dataset(dataset)
-
-        parameters = dataset.shape[1] - 1 #removing the result
-        self.theta = np.random.rand(parameters)
+    def __init__(self, dataset:Dataset, learning_rate:float=0.1) -> None:
+        self.__init__(dataset)
+        self.theta = np.random.rand(self.learnset.param)
         self.alpha = max(0, learning_rate)
 
     def learning_step(self) -> float:
-        x, y, m = self._split_data_target(self.learnset)
+        x, y, m, _ = self.learnset.as_tuple()
 
         self.theta -= self.alpha * (1/m) * np.sum((self._h0(x) - y) * x.T, axis=1)
         return self._loss(x, y, m)
 
-    def predict_loss(self, dataset:np.ndarray) -> float:
-        x, y, m = self._split_data_target(dataset)
-        return self._loss(x, y, m)
+    def predict_loss(self, dataset:Data) -> float:
+        return self._loss(dataset.x, dataset.y, dataset.size)
 
     def get_parameters(self):
         return self.theta.copy()
@@ -51,3 +49,10 @@ class LogisticRegression(GradientDescent):
         h0 = self._h0(x)
         diff = -y*np.log(h0) -(1-y)*np.log(1-h0)
         return 1/m * np.sum(diff)
+
+class MultiLayerPerceptron(MLAlgorithm):
+    neurons: list[np.ndarray]
+
+    def __init__(self, dataset:Dataset, layers:list[int]=[4,3]) -> None:
+        self.__init__(dataset)
+

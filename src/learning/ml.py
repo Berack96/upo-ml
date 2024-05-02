@@ -1,33 +1,25 @@
 from abc import ABC, abstractmethod
 from plot import Plot
 from tqdm import tqdm
+from learning.data import Dataset, Data
 
-import pandas as pd
 import numpy as np
 
 
 class MLAlgorithm(ABC):
     """ Classe generica per gli algoritmi di Machine Learning """
 
-    testset: np.ndarray
-    learnset: np.ndarray
+    learnset: Data
+    validset: Data
+    testset: Data
+    _learn_loss: list[float]
     _valid_loss: list[float]
-    _train_loss: list[float]
 
-    def _set_dataset(self, dataset:np.ndarray, split:float=0.2):
-        splitT = int(dataset.shape[0] * split)
-        splitV = int(splitT / 2)
-
-        np.random.shuffle(dataset)
-        self.validset = dataset[:splitV]
-        self.testset = dataset[splitV:splitT]
-        self.learnset = dataset[splitT:]
-
-    def _split_data_target(self, dset:np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
-        x = np.delete(dset, 0, 1)
-        y = dset[:, 0]
-        m = dset.shape[0]
-        return (x, y, m)
+    def __init__(self, dataset:Dataset) -> None:
+        learn, test, valid = dataset.get_dataset(0.2, 0.2)
+        self.learnset = learn
+        self.validset = valid
+        self.testset = test
 
     def learn(self, epochs:int, early_stop:float=0.0000001, max_patience:int=10, verbose:bool=False) -> tuple[int, list, list]:
         learn = []
@@ -56,7 +48,7 @@ class MLAlgorithm(ABC):
         except KeyboardInterrupt: pass
         if verbose: print(f"Loop ended after {count} epochs")
 
-        self._train_loss = learn
+        self._learn_loss = learn
         self._valid_loss = valid
         return (count, learn, valid)
 
@@ -70,24 +62,23 @@ class MLAlgorithm(ABC):
         return self.predict_loss(self.testset)
 
     def plot(self, skip:int=1000) -> None:
-        skip = skip if len(self._train_loss) > skip else 0
+        skip = skip if len(self._learn_loss) > skip else 0
         plot = Plot("Loss", "Time", "Mean Loss")
-        plot.line("training", "blue", data=self._train_loss[skip:])
+        plot.line("training", "blue", data=self._learn_loss[skip:])
         plot.line("validation", "red", data=self._valid_loss[skip:])
         plot.wait()
 
-    def confusion_matrix(self, dataset:np.ndarray) -> np.ndarray:
-        x, y, _ = self._split_data_target(dataset)
-        h0 = np.where(self._h0(x) > 0.5, 1, 0)
+    def confusion_matrix(self, dataset:Data) -> np.ndarray:
+        h0 = np.where(self._h0(dataset.x) > 0.5, 1, 0)
 
-        classes = len(np.unique(y))
+        classes = len(np.unique(dataset.y))
         conf_matrix = np.zeros((classes, classes), dtype=int)
 
-        for actual, prediction in zip(y, h0):
+        for actual, prediction in zip(dataset.y, h0):
             conf_matrix[int(actual), int(prediction)] += 1
         return conf_matrix
 
-    def accuracy(self, dataset:np.ndarray) -> np.ndarray:
+    def accuracy(self, dataset:Data) -> float:
         conf = self.confusion_matrix(dataset)
         correct = np.sum(np.diagonal(conf))
         total = np.sum(conf)
@@ -98,7 +89,7 @@ class MLAlgorithm(ABC):
     @abstractmethod
     def learning_step(self) -> float: pass
     @abstractmethod
-    def predict_loss(self, dataset:np.ndarray) -> float: pass
+    def predict_loss(self, dataset:Data) -> float: pass
     @abstractmethod
     def get_parameters(self): pass
     @abstractmethod
