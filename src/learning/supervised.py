@@ -43,7 +43,7 @@ class LinearRegression(GradientDescent):
         return self.theta.dot(x.T)
 
     def _loss(self, x:np.ndarray, y:np.ndarray, m:int) -> float:
-        diff = (x.dot(self.theta) - y)
+        diff = (self._h0(x) - y)
         return 1/(2*m) * np.sum(diff ** 2)
 
 class LogisticRegression(GradientDescent):
@@ -56,19 +56,57 @@ class LogisticRegression(GradientDescent):
         return 1/m * np.sum(diff)
 
 class MultiLayerPerceptron(MLAlgorithm):
-    neurons: list[np.ndarray]
+    layers: list[np.ndarray]
+    calculated: list[np.ndarray]
 
-    def __init__(self, dataset:Dataset, layers:list[int]=[4,3]) -> None:
+    def __init__(self, dataset:Dataset, layers:list[int]) -> None:
         super().__init__(dataset)
+        input = self.learnset.x.shape[1]
+        output = self.learnset.y.shape[1]
+
+        if type(layers) is not list[int]:
+            layers = [4, 3, output]
+        else: layers.append(output)
+
+        self.layers = []
+        self.calculated = []
+
+        for next in layers:
+            current = np.random.rand(input, next)
+            self.layers.append(current)
+            input = next + 1 # bias
 
     def _h0(self, x:np.ndarray) -> np.ndarray:
-        pass
+        input = x
+        for i, layer in enumerate(self.layers):
+            if i != 0:
+                ones = np.ones(shape=(input.shape[0], 1))
+                input = np.hstack([input, ones])
+            input = input.dot(layer)
+            input = input * (input > 0) # activation function ReLU
+            self.calculated[i] = input # saving previous result
+        return self.soft_max(input)
+
+    def soft_max(self, input:np.ndarray) -> np.ndarray:
+        input = np.exp(input)
+        total_sum = np.sum(input, axis=1)
+        input = input.T / total_sum
+        return input.T
+
     def learning_step(self) -> float:
-        pass
-    def predict_loss(self, dataset:np.ndarray) -> float:
-        pass
+
+        raise NotImplemented
+
+    def predict_loss(self, dataset:Data) -> float:
+        diff = self._h0(dataset.x) - dataset.y
+        return 1/(2*dataset.size) * np.sum(diff ** 2)
+
+
     def get_parameters(self):
-        pass
+        parameters = []
+        for x in self.layers:
+            parameters.append(x.copy())
+        return parameters
     def set_parameters(self, parameters):
-        pass
+        self.layers = parameters
 

@@ -41,7 +41,7 @@ def frogs() -> tuple[int, MLAlgorithm]:
     ds = Dataset(CLASSIFICATION + "frogs.csv", "Species", TargetType.MultiClassification)
     ds.remove(["Family", "Genus", "RecordID"])
     ds.factorize(["Species"])
-    return (1000, MultiLayerPerceptron(ds, learning_rate=0.08))
+    return (1000, MultiLayerPerceptron(ds, [4, 3]))
 
 
 
@@ -59,5 +59,5 @@ def learn_dataset(function:Callable[..., tuple[int, MLAlgorithm]], epochs:int=10
     return ml
 
 if __name__ == "__main__":
-    ml = learn_dataset(electrical_grid)
+    ml = learn_dataset(frogs)
     print(ml.accuracy(ml.testset))
