@@ -12,12 +12,12 @@ class GradientDescent(MLAlgorithm):
 
     def __init__(self, dataset:Dataset, learning_rate:float=0.1, regularization:float=0.01) -> None:
         super().__init__(dataset)
-        self.theta = np.random.rand(self.learnset.param)
+        self.theta = np.random.rand(self._learnset.param)
         self.alpha = max(0, learning_rate)
         self.lambd = max(0, regularization)
 
-    def learning_step(self) -> float:
-        x, y, m, _ = self.learnset.as_tuple()
+    def _learning_step(self) -> float:
+        x, y, m, _ = self._learnset.as_tuple()
 
         regularization = (self.lambd / m) * self.theta
         regularization[0] = 0
@@ -25,13 +25,13 @@ class GradientDescent(MLAlgorithm):
         self.theta -= derivative + regularization
         return self._loss(x, y, m)
 
-    def predict_loss(self, dataset:Data) -> float:
+    def _predict_loss(self, dataset:Data) -> float:
         return self._loss(dataset.x, dataset.y, dataset.size)
 
-    def get_parameters(self):
+    def _get_parameters(self):
         return self.theta.copy()
 
-    def set_parameters(self, parameters):
+    def _set_parameters(self, parameters):
         self.theta = parameters
 
     @abstractmethod
@@ -51,8 +51,9 @@ class LogisticRegression(GradientDescent):
         return 1 / (1 + np.exp(-self.theta.dot(x.T)))
 
     def _loss(self, x:np.ndarray, y:np.ndarray, m:int) -> float:
+        not_zero = 1e-15
         h0 = self._h0(x)
-        diff = -y*np.log(h0) -(1-y)*np.log(1-h0)
+        diff = - y*np.log(h0 + not_zero) - (1-y)*np.log(1-h0 + not_zero)
         return 1/m * np.sum(diff)
 
 class MultiLayerPerceptron(MLAlgorithm):
@@ -61,8 +62,8 @@ class MultiLayerPerceptron(MLAlgorithm):
 
     def __init__(self, dataset:Dataset, layers:list[int]) -> None:
         super().__init__(dataset)
-        input = self.learnset.x.shape[1]
-        output = self.learnset.y.shape[1]
+        input = self._learnset.x.shape[1]
+        output = self._learnset.y.shape[1]
 
         if type(layers) is not list[int]:
             layers = [4, 3, output]
@@ -93,20 +94,20 @@ class MultiLayerPerceptron(MLAlgorithm):
         input = input.T / total_sum
         return input.T
 
-    def learning_step(self) -> float:
+    def _learning_step(self) -> float:
 
         raise NotImplemented
 
-    def predict_loss(self, dataset:Data) -> float:
+    def _predict_loss(self, dataset:Data) -> float:
         diff = self._h0(dataset.x) - dataset.y
         return 1/(2*dataset.size) * np.sum(diff ** 2)
 
 
-    def get_parameters(self):
+    def _get_parameters(self):
         parameters = []
         for x in self.layers:
             parameters.append(x.copy())
         return parameters
-    def set_parameters(self, parameters):
+    def _set_parameters(self, parameters):
         self.layers = parameters
 

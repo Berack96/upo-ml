@@ -1,21 +1,31 @@
+import random
+from typing import Any
+import numpy as np
+import sklearn
+import sklearn.linear_model
+import sklearn.model_selection
+import sklearn.neural_network
 from learning.data import Dataset, TargetType
 from learning.supervised import LinearRegression, LogisticRegression, MultiLayerPerceptron
 from learning.ml import MLAlgorithm
-from typing import Callable
 
 DATASET = "datasets/"
 REGRESSION = DATASET + "regression/"
 CLASSIFICATION = DATASET + "classification/"
 
-def auto_mpg() -> tuple[int, MLAlgorithm]:
+# ********************
+# Linear Regression
+# ********************
+
+def auto_mpg() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(REGRESSION + "auto-mpg.csv", "MPG", TargetType.Regression)
 
     ds.numbers(["HP"])
     ds.handle_na()
     ds.normalize(excepts=["Cylinders","Year","Origin"])
-    return (1000, LinearRegression(ds, learning_rate=0.0001))
+    return (ds, LinearRegression(ds, learning_rate=0.0001), sklearn.linear_model.LinearRegression())
 
-def automobile() -> tuple[int, MLAlgorithm]:
+def automobile() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(REGRESSION + "automobile.csv", "symboling", TargetType.Regression)
 
     attributes_to_modify = ["fuel-system", "engine-type", "drive-wheels", "body-style", "make", "engine-location", "aspiration", "fuel-type", "num-of-cylinders", "num-of-doors"]
@@ -23,41 +33,68 @@ def automobile() -> tuple[int, MLAlgorithm]:
     ds.numbers(["normalized-losses", "bore", "stroke", "horsepower", "peak-rpm", "price"])
     ds.handle_na()
     ds.normalize(excepts=attributes_to_modify)
-    return (1000, LinearRegression(ds, learning_rate=0.004))
+    return (ds, LinearRegression(ds, learning_rate=0.004), sklearn.linear_model.LinearRegression())
 
-def power_plant() -> tuple[int, MLAlgorithm]:
+def power_plant() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(REGRESSION + "power-plant.csv", "energy-output", TargetType.Regression)
     ds.normalize()
-    return (80, LinearRegression(ds, learning_rate=0.1))
+    return (ds, LinearRegression(ds, learning_rate=0.1), sklearn.linear_model.LinearRegression())
 
+# ********************
+# Logistic Regression
+# ********************
 
-def electrical_grid() -> tuple[int, MLAlgorithm]:
+def electrical_grid() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(CLASSIFICATION + "electrical_grid.csv", "stabf", TargetType.Classification)
     ds.factorize(["stabf"])
     ds.normalize()
-    return (1000, LogisticRegression(ds, learning_rate=0.08))
+    return (ds, LogisticRegression(ds, learning_rate=100), sklearn.linear_model.LogisticRegression())
 
-def frogs() -> tuple[int, MLAlgorithm]:
+def heart() -> tuple[Dataset, MLAlgorithm, Any]:
+    ds = Dataset(CLASSIFICATION + "heart.csv", "Disease", TargetType.Classification)
+    attributes_to_modify = ["Disease", "Sex", "ChestPainType"]
+    ds.factorize(attributes_to_modify)
+    ds.normalize(excepts=attributes_to_modify)
+    return (ds, LogisticRegression(ds, learning_rate=0.001), sklearn.linear_model.LogisticRegression())
+
+# ********************
+# MultiLayerPerceptron
+# ********************
+
+def frogs() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(CLASSIFICATION + "frogs.csv", "Species", TargetType.MultiClassification)
     ds.remove(["Family", "Genus", "RecordID"])
     ds.factorize(["Species"])
-    return (1000, MultiLayerPerceptron(ds, [4, 3]))
+    return (ds, MultiLayerPerceptron(ds, [4, 3]), sklearn.neural_network.MLPClassifier([4, 3], 'relu'))
 
+def iris() -> tuple[Dataset, MLAlgorithm, Any]:
+    ds = Dataset(CLASSIFICATION + "iris.csv", "Class", TargetType.MultiClassification)
+    ds.factorize(["Class"])
+    ds.normalize()
+    return (ds, MultiLayerPerceptron(ds, [4, 3]), sklearn.neural_network.MLPClassifier([4, 3], 'relu'))
 
-
-
-def learn_dataset(function:Callable[..., tuple[int, MLAlgorithm]], epochs:int=10000, verbose=True)-> MLAlgorithm:
-    skip, ml = function()
-    ml.learn(epochs, verbose=verbose)
-
-    err_tests = ml.test_loss()
-    err_valid = ml.validation_loss()
-    err_learn = ml.learning_loss()
-    print(f"Loss value: tests={err_tests:1.5f}, valid={err_valid:1.5f}, learn={err_learn:1.5f}")
-
-    ml.plot(skip=skip)
-    return ml
+# ********************
+# Main & random
+# ********************
 
 if __name__ == "__main__":
-    ml = learn_dataset(frogs)
-    print(ml.accuracy(ml.testset))
+    np.set_printoptions(linewidth=np.inf, formatter={'float': '{:>10.5f}'.format})
+    rand = random.randint(0, 4294967295)
+    np.random.seed(rand)
+    print(f"Using seed: {rand}")
+
+    ds, ml, sk = electrical_grid()
+    ml.learn(10000, verbose=True)
+    ml.display_results()
+
+    np.random.seed(rand)
+    learn, test, valid = ds.get_dataset()
+    sk.fit(learn.x, learn.y)
+    print(f"Sklearn    : {sk.score(test.x, test.y):0.5f}")
+    print("========================")
+
+    ml.plot()
+
+# migliori parametri trovati per electrical_grid
+# temp = np.array([-48.28601, 0.00429, 0.07933, 0.02144, -0.04225, 0.36898, 0.24723, 0.36445, 0.21437, 0.29666, 0.22532, 0.38619, 0.24171, -113.65430])
+# ml._set_parameters(temp)
