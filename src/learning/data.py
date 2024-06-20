@@ -47,7 +47,9 @@ class Dataset:
         return self
 
     def normalize(self, excepts:list[str]=[]) -> Self:
-        excepts.append(self.target)
+        if excepts is None: excepts = []
+        else: excepts.append(self.target)
+
         for col in self.data:
             if col not in excepts:
                 index = self.data.columns.get_loc(col)
@@ -133,6 +135,32 @@ class ConfusionMatrix:
         fn = np.sum(self.matrix, axis=1) - tp
         tn = total - (tp + fp + fn)
         return tn / (tn + fp)
+
+    def accuracy(self) -> float:
+        tp = np.diag(self.matrix).sum()
+        total = self.matrix.sum()
+        return tp / total
+
+    def precision(self) -> float:
+        precision_per_class = self.precision_per_class()
+        support = np.sum(self.matrix, axis=1)
+        return np.average(precision_per_class, weights=support)
+
+    def recall(self) -> float:
+        recall_per_class = self.recall_per_class()
+        support = np.sum(self.matrix, axis=1)
+        return np.average(recall_per_class, weights=support)
+
+    def f1_score(self) -> float:
+        f1_per_class = self.f1_score_per_class()
+        support = np.sum(self.matrix, axis=1)
+        return np.average(f1_per_class, weights=support)
+
+    def specificity(self) -> float:
+        specificity_per_class = self.specificity_per_class()
+        support = np.sum(self.matrix, axis=1)
+        return np.average(specificity_per_class, weights=support)
+
 
 if __name__ == "__main__":
     ds = Dataset("datasets\\classification\\frogs.csv", "Species", TargetType.MultiClassification)

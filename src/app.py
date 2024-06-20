@@ -55,7 +55,7 @@ def heart() -> tuple[Dataset, MLAlgorithm, Any]:
     attributes_to_modify = ["Disease", "Sex", "ChestPainType"]
     ds.factorize(attributes_to_modify)
     ds.normalize(excepts=attributes_to_modify)
-    return (ds, LogisticRegression(ds, learning_rate=0.001), sklearn.linear_model.LogisticRegression())
+    return (ds, LogisticRegression(ds, learning_rate=0.01), sklearn.linear_model.LogisticRegression())
 
 # ********************
 # MultiLayerPerceptron
