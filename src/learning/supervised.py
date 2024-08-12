@@ -12,7 +12,7 @@ class GradientDescent(MLAlgorithm):
 
     def __init__(self, dataset:Dataset, learning_rate:float=0.1, regularization:float=0.01) -> None:
         super().__init__(dataset)
-        self.theta = np.random.rand(self._learnset.param)
+        self.theta = np.random.rand(self._learnset.param + 1) # bias
         self.alpha = max(0, learning_rate)
         self.lambd = max(0, regularization)
 
@@ -21,7 +21,7 @@ class GradientDescent(MLAlgorithm):
 
         regularization = (self.lambd / m) * self.theta
         regularization[0] = 0
-        derivative = self.alpha * (1/m) * np.sum((self._h0(x) - y) * x.T, axis=1)
+        derivative = self.alpha * (1/m) * np.sum((self._h0(x) - y) * self.with_bias(x).T, axis=1)
         self.theta -= derivative + regularization
         return self._loss(x, y, m)
 
@@ -40,7 +40,7 @@ class GradientDescent(MLAlgorithm):
 
 class LinearRegression(GradientDescent):
     def _h0(self, x: np.ndarray) -> np.ndarray:
-        return self.theta.dot(x.T)
+        return self.theta.dot(self.with_bias(x).T)
 
     def _loss(self, x:np.ndarray, y:np.ndarray, m:int) -> float:
         diff = (self._h0(x) - y)
@@ -48,7 +48,7 @@ class LinearRegression(GradientDescent):
 
 class LogisticRegression(GradientDescent):
     def _h0(self, x: np.ndarray) -> np.ndarray:
-        return 1 / (1 + np.exp(-self.theta.dot(x.T)))
+        return 1 / (1 + np.exp(-self.theta.dot(self.with_bias(x).T)))
 
     def _loss(self, x:np.ndarray, y:np.ndarray, m:int) -> float:
         not_zero = 1e-15
@@ -58,7 +58,7 @@ class LogisticRegression(GradientDescent):
 
 class MultiLayerPerceptron(MLAlgorithm):
     layers: list[np.ndarray]
-    calculated: list[np.ndarray]
+    activations: list[np.ndarray]
 
     def __init__(self, dataset:Dataset, layers:list[int]) -> None:
         super().__init__(dataset)
@@ -70,33 +70,43 @@ class MultiLayerPerceptron(MLAlgorithm):
         else: layers.append(output)
 
         self.layers = []
-        self.calculated = []
+        self.activations = []
 
         for next in layers:
-            current = np.random.rand(input, next)
+            current = np.random.rand(input + 1, next) # +1 bias
             self.layers.append(current)
-            input = next + 1 # bias
+            input = next
 
     def _h0(self, x:np.ndarray) -> np.ndarray:
-        input = x
-        for i, layer in enumerate(self.layers):
-            if i != 0:
-                ones = np.ones(shape=(input.shape[0], 1))
-                input = np.hstack([input, ones])
-            input = input.dot(layer)
-            input = input * (input > 0) # activation function ReLU
-            self.calculated[i] = input # saving previous result
-        return self.soft_max(input)
+        self.activations = [x]
 
-    def soft_max(self, input:np.ndarray) -> np.ndarray:
-        input = np.exp(input)
-        total_sum = np.sum(input, axis=1)
-        input = input.T / total_sum
-        return input.T
+        for layer in self.layers:
+            x = self.with_bias(x)
+            x = x.dot(layer)
+            x = x * (x > 0) # activation function ReLU
+            self.activations.append(x) # saving activation result
+        return self.softmax(x)
 
     def _learning_step(self) -> float:
+        x, y, m, _ = self._learnset.as_tuple()
+        delta = self._h0(x) - y # first term is derivative of softmax
 
-        raise NotImplemented
+        for l in reversed(range(len(self.layers))):
+            activation = self.activations[l]
+            deltaW = np.dot(self.with_bias(activation).T, delta) / m
+
+            if l > 0:
+                delta = np.dot(delta, self.layers[l][:-1].T) # ignoring bias
+                delta[activation <= 0] = 0 # derivative ReLU
+            self.layers[l] -= deltaW
+
+        return self._predict_loss(self._learnset)
+
+    def softmax(self, input:np.ndarray) -> np.ndarray:
+        input = input - np.max(input, axis=1, keepdims=True) # for overflow
+        exp_input = np.exp(input)
+        total_sum = np.sum(exp_input, axis=1, keepdims=True)
+        return exp_input / total_sum
 
     def _predict_loss(self, dataset:Data) -> float:
         diff = self._h0(dataset.x) - dataset.y

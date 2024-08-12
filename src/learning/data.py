@@ -75,9 +75,35 @@ class Dataset:
         self.data = self.data.dropna()
         return self
 
+    def prepare_classification(self, data:np.ndarray) -> np.ndarray:
+        if self.target_type == TargetType.Regression or self.target_type == TargetType.NoTarget:
+            return data
+
+        classes = np.unique(data[:, 0])
+        splitted = [data[ data[:,0] == k ] for k in classes ]
+        total_each = np.average([len(x) for x in splitted]).astype(int)
+
+        rng = np.random.default_rng()
+        data = []
+        for x in splitted:
+            samples = rng.choice(x, size=total_each, replace=True, shuffle=False)
+            data.append(samples)
+
+        return np.concatenate(data, axis=0)
+
+    def split_data_target(self, data:np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        target = data[:, 0] if self.target_type != TargetType.NoTarget else None
+        data = data[:, 1:]
+        if self.target_type == TargetType.MultiClassification:
+            target = target.astype(int)
+            uniques = np.unique(target).shape[0]
+            target = np.eye(uniques)[target]
+        return (data, target)
+
     def get_dataset(self, test_frac:float=0.2, valid_frac:float=0.2) -> tuple[Data, Data, Data]:
         data = self.data.to_numpy()
-        data = np.insert(data, 1, 1, axis=1) # adding bias
+        data = self.prepare_classification(data)
+
         np.random.shuffle(data)
 
         total = data.shape[0]
@@ -89,14 +115,9 @@ class Dataset:
         learn = data[test_cutoff:]
 
         l = []
-        for ds in [learn, test, valid]:
-            target = ds[:, 0] if self.target_type != TargetType.NoTarget else None
-            ds = ds[:, 1:]
-            if self.target_type == TargetType.MultiClassification:
-                target = target.astype(int)
-                uniques = np.unique(target).shape[0]
-                target = np.eye(uniques)[target]
-            l.append(Data(ds, target))
+        for data in [learn, test, valid]:
+            data, target = self.split_data_target(data)
+            l.append(Data(data, target))
         return l
 
 class ConfusionMatrix:
@@ -108,38 +129,40 @@ class ConfusionMatrix:
 
         for actual, prediction in zip(dataset_y, predictions_y):
             conf_matrix[int(actual), int(prediction)] += 1
+
         self.matrix = conf_matrix
+        self.classes = classes
+        self.total = dataset_y.shape[0]
+        self.tp = np.diagonal(conf_matrix)
+        self.fp = np.sum(conf_matrix, axis=0) - self.tp
+        self.fn = np.sum(conf_matrix, axis=1) - self.tp
+        self.tn = self.total - (self.tp + self.fp + self.fn)
+
+    def divide_ignore_zero(self, a:np.ndarray, b:np.ndarray) -> np.ndarray:
+        with np.errstate(divide='ignore', invalid='ignore'):
+            c = np.true_divide(a, b)
+            c[c == np.inf] = 0
+            return np.nan_to_num(c)
 
     def accuracy_per_class(self) -> np.ndarray:
-        return np.diag(self.matrix) / np.sum(self.matrix, axis=1)
+        return self.tp / np.sum(self.matrix, axis=1)
 
     def precision_per_class(self) -> np.ndarray:
-        tp = np.diagonal(self.matrix)
-        fp = np.sum(self.matrix, axis=0) - tp
-        return tp / (tp + fp)
+        return self.divide_ignore_zero(self.tp, self.tp + self.fp)
 
     def recall_per_class(self) -> np.ndarray:
-        tp = np.diagonal(self.matrix)
-        fn = np.sum(self.matrix, axis=1) - tp
-        return tp / (tp + fn)
+        return self.divide_ignore_zero(self.tp, self.tp + self.fn)
 
     def f1_score_per_class(self) -> np.ndarray:
         prec = self.precision_per_class()
         rec = self.recall_per_class()
-        return 2 * (prec * rec) / (prec + rec)
+        return self.divide_ignore_zero(2 * prec * rec, prec + rec)
 
     def specificity_per_class(self) -> np.ndarray:
-        total = np.sum(self.matrix)
-        tp = np.diagonal(self.matrix)
-        fp = np.sum(self.matrix, axis=0) - tp
-        fn = np.sum(self.matrix, axis=1) - tp
-        tn = total - (tp + fp + fn)
-        return tn / (tn + fp)
+        return self.divide_ignore_zero(self.tn, self.tn + self.fp)
 
     def accuracy(self) -> float:
-        tp = np.diag(self.matrix).sum()
-        total = self.matrix.sum()
-        return tp / total
+        return self.tp.sum() / self.total
 
     def precision(self) -> float:
         precision_per_class = self.precision_per_class()
