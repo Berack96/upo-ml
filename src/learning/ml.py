@@ -79,7 +79,7 @@ class MLAlgorithm(ABC):
         print(f"Loss test  : {self.test_loss():0.5f}")
         if self._target_type == TargetType.Regression:
             print(f"R^2        : {self.test_r_squared():0.5f}")
-        else:
+        elif self._target_type != TargetType.NoTarget:
             conf = self.test_confusion_matrix()
             print(f"Accuracy   : {conf.accuracy():0.5f} - classes {conf.accuracy_per_class()}")
             print(f"Precision  : {conf.precision():0.5f} - classes {conf.precision_per_class()}")

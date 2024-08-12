@@ -83,7 +83,8 @@ class Dataset:
         splitted = [data[ data[:,0] == k ] for k in classes ]
         total_each = np.average([len(x) for x in splitted]).astype(int)
 
-        rng = np.random.default_rng()
+        seed = np.random.randint(0, 4294967295)
+        rng = np.random.default_rng(seed)
         data = []
         for x in splitted:
             samples = rng.choice(x, size=total_each, replace=True, shuffle=False)
