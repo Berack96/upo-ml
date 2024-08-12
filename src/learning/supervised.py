@@ -4,6 +4,7 @@ import numpy as np
 from abc import abstractmethod
 from learning.ml import MLAlgorithm
 from learning.data import Dataset, Data
+NOT_ZERO = 1e-15
 
 class GradientDescent(MLAlgorithm):
     theta:np.ndarray
@@ -51,16 +52,15 @@ class LogisticRegression(GradientDescent):
         return 1 / (1 + np.exp(-self.theta.dot(self.with_bias(x).T)))
 
     def _loss(self, x:np.ndarray, y:np.ndarray, m:int) -> float:
-        not_zero = 1e-15
         h0 = self._h0(x)
-        diff = - y*np.log(h0 + not_zero) - (1-y)*np.log(1-h0 + not_zero)
+        diff = - y*np.log(h0 + NOT_ZERO) - (1-y)*np.log(1-h0 + NOT_ZERO)
         return 1/m * np.sum(diff)
 
 class MultiLayerPerceptron(MLAlgorithm):
     layers: list[np.ndarray]
     activations: list[np.ndarray]
 
-    def __init__(self, dataset:Dataset, layers:list[int]) -> None:
+    def __init__(self, dataset:Dataset, layers:list[int], learning_rate:float=0.1) -> None:
         super().__init__(dataset)
         input = self._learnset.x.shape[1]
         output = self._learnset.y.shape[1]
@@ -71,9 +71,10 @@ class MultiLayerPerceptron(MLAlgorithm):
 
         self.layers = []
         self.activations = []
+        self.learning_rate = learning_rate
 
         for next in layers:
-            current = np.random.rand(input + 1, next) # +1 bias
+            current = np.random.rand(input + 1, next) * np.sqrt(2 / input) # +1 bias, sqrt is He init
             self.layers.append(current)
             input = next
 
@@ -98,7 +99,7 @@ class MultiLayerPerceptron(MLAlgorithm):
             if l > 0:
                 delta = np.dot(delta, self.layers[l][:-1].T) # ignoring bias
                 delta[activation <= 0] = 0 # derivative ReLU
-            self.layers[l] -= deltaW
+            self.layers[l] -= deltaW * self.learning_rate
 
         return self._predict_loss(self._learnset)
 
@@ -108,9 +109,9 @@ class MultiLayerPerceptron(MLAlgorithm):
         total_sum = np.sum(exp_input, axis=1, keepdims=True)
         return exp_input / total_sum
 
-    def _predict_loss(self, dataset:Data) -> float:
-        diff = self._h0(dataset.x) - dataset.y
-        return 1/(2*dataset.size) * np.sum(diff ** 2)
+    def _predict_loss(self, dataset:Data) -> float: # cross-entropy
+        diff = dataset.y * np.log(self._h0(dataset.x) + NOT_ZERO)
+        return -np.mean(np.sum(diff, axis=1))
 
 
     def _get_parameters(self):

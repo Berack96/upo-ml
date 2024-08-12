@@ -65,13 +65,15 @@ def frogs() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(CLASSIFICATION + "frogs.csv", "Species", TargetType.MultiClassification)
     ds.remove(["Family", "Genus", "RecordID"])
     ds.factorize(["Species"])
-    return (ds, MultiLayerPerceptron(ds, [4, 3]), sklearn.neural_network.MLPClassifier([4, 3], 'relu'))
+    size = [8, 5]
+    return (ds, MultiLayerPerceptron(ds, size, 0.1), sklearn.neural_network.MLPClassifier(size, 'relu'))
 
 def iris() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(CLASSIFICATION + "iris.csv", "Class", TargetType.MultiClassification)
     ds.factorize(["Class"])
     ds.normalize()
-    return (ds, MultiLayerPerceptron(ds, [4, 3]), sklearn.neural_network.MLPClassifier([4, 3], 'relu'))
+    size = [4, 3]
+    return (ds, MultiLayerPerceptron(ds, size), sklearn.neural_network.MLPClassifier(size, 'relu'))
 
 # ********************
 # Main & random
