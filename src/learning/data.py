@@ -1,5 +1,5 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from enum import Enum
 from typing_extensions import Self
@@ -184,16 +184,3 @@ class ConfusionMatrix:
         specificity_per_class = self.specificity_per_class()
         support = np.sum(self.matrix, axis=1)
         return np.average(specificity_per_class, weights=support)
-
-
-if __name__ == "__main__":
-    ds = Dataset("datasets\\classification\\frogs.csv", "Species", TargetType.MultiClassification)
-    ds.remove(["Family", "Genus", "RecordID"])
-    ds.factorize(["Species"])
-
-    np.random.seed(0)
-    learn, test, valid = ds.get_dataset()
-    print(learn)
-    print(test)
-    print(valid)
-

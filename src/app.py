@@ -1,14 +1,14 @@
-import random
-from typing import Any
 import numpy as np
 import sklearn
 import sklearn.cluster
 import sklearn.linear_model
 import sklearn.model_selection
 import sklearn.neural_network
+
+from typing import Any
+from learning.ml import MLAlgorithm
 from learning.data import Dataset, TargetType
 from learning.supervised import LinearRegression, LogisticRegression, MultiLayerPerceptron
-from learning.ml import MLAlgorithm
 from learning.unsupervised import KMeans
 
 DATASET = "datasets/"
@@ -67,8 +67,8 @@ def frogs() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(CLASSIFICATION + "frogs.csv", "Species", TargetType.MultiClassification)
     ds.remove(["Family", "Genus", "RecordID"])
     ds.factorize(["Species"])
-    size = [8, 5]
-    return (ds, MultiLayerPerceptron(ds, size, 0.1), sklearn.neural_network.MLPClassifier(size, 'relu'))
+    size = [18, 15, 12, 10, 8]
+    return (ds, MultiLayerPerceptron(ds, size), sklearn.neural_network.MLPClassifier(size, 'relu'))
 
 def iris() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(CLASSIFICATION + "iris.csv", "Class", TargetType.MultiClassification)
@@ -100,16 +100,17 @@ def iris_no_target() -> tuple[Dataset, MLAlgorithm, Any]:
 
 if __name__ == "__main__":
     np.set_printoptions(linewidth=np.inf, formatter={'float': '{:>10.5f}'.format})
-    rand = random.randint(0, 4294967295)
+    rand = np.random.randint(0, 4294967295)
     #rand = 1997847910  # LiR for power_plant
     #rand = 347617386   # LoR for electrical_grid
     #rand = 1793295160  # MLP for iris
+    #rand = 2914000170  # MLP for frogs
     #rand = 885416001   # KMe for frogs_no_target
 
     np.random.seed(rand)
     print(f"Using seed: {rand}")
 
-    ds, ml, sk = iris()
+    ds, ml, sk = frogs()
 
     epochs, _, _ = ml.learn(1000, verbose=True)
     ml.display_results()
@@ -122,7 +123,3 @@ if __name__ == "__main__":
     print("========================")
 
     ml.plot()
-
-# migliori parametri trovati per electrical_grid
-# temp = np.array([-48.28601, 0.00429, 0.07933, 0.02144, -0.04225, 0.36898, 0.24723, 0.36445, 0.21437, 0.29666, 0.22532, 0.38619, 0.24171, -113.65430])
-# ml._set_parameters(temp)

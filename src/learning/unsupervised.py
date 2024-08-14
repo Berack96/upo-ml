@@ -1,10 +1,8 @@
 import math as math
 import numpy as np
 
-from abc import abstractmethod
 from learning.ml import MLAlgorithm
 from learning.data import Dataset, Data
-NOT_ZERO = 1e-15
 
 class KMeans(MLAlgorithm):
     def __init__(self, dataset: Dataset, clusters:int) -> None:

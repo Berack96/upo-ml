@@ -1,10 +1,11 @@
+import sys
+import numpy as np
+
 from abc import ABC, abstractmethod
 from plot import Plot
 from tqdm import tqdm
 from learning.data import ConfusionMatrix, Dataset, Data, TargetType
-
-import numpy as np
-
+from learning.functions import r_squared
 
 class MLAlgorithm(ABC):
     """ Classe generica per gli algoritmi di Machine Learning """
@@ -22,14 +23,12 @@ class MLAlgorithm(ABC):
         self._validset = valid
         self._testset = test
 
-    def with_bias(self, x:np.ndarray) -> np.ndarray:
-        return np.hstack([x, np.ones(shape=(x.shape[0], 1))])
-
     def learn(self, epochs:int, early_stop:float=0.0000001, max_patience:int=10, verbose:bool=False) -> tuple[int, list, list]:
         learn = []
         valid = []
         count = 0
         patience = 0
+        best = (sys.float_info.max, [])
         trange = range(epochs)
         if verbose: trange = tqdm(trange, bar_format="Epochs {percentage:3.0f}% [{bar}] {elapsed}{postfix}")
 
@@ -45,13 +44,19 @@ class MLAlgorithm(ABC):
                     patience = 0
 
                 count += 1
-                learn.append(self._learning_step())
-                valid.append(self.validation_loss())
 
+                learn_loss = self._learning_step()
+                valid_loss = self.validation_loss()
+                if valid_loss < best[0]:
+                    best = (valid_loss, self._get_parameters())
+
+                learn.append(learn_loss)
+                valid.append(valid_loss)
                 if verbose: trange.set_postfix({"learn": f"{learn[-1]:2.5f}", "validation": f"{valid[-1]:2.5f}"})
         except KeyboardInterrupt: pass
         if verbose: print(f"Loop ended after {count} epochs")
 
+        self._set_parameters(best[1])
         self._learn_loss = learn
         self._valid_loss = valid
         return (count, learn, valid)
@@ -104,12 +109,7 @@ class MLAlgorithm(ABC):
     def test_r_squared(self) -> float:
         if self._target_type != TargetType.Regression:
             return 0
-
-        h0 = self._h0(self._testset.x)
-        y_mean = np.mean(self._testset.y)
-        ss_total = np.sum((self._testset.y - y_mean) ** 2)
-        ss_resid = np.sum((self._testset.y - h0) ** 2)
-        return 1 - (ss_resid / ss_total)
+        return r_squared(self._h0(self._testset.x), self._testset.y)
 
     @abstractmethod
     def _h0(self, x:np.ndarray) -> np.ndarray: pass
