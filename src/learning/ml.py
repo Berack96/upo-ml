@@ -72,7 +72,7 @@ class MLAlgorithm(ABC):
 
     def plot(self, skip:int=1000) -> None:
         skip = skip if len(self._learn_loss) > skip else 0
-        plot = Plot("Loss", "Time", "Mean Loss")
+        plot = Plot("Loss", "Epochs", "Mean Loss")
         plot.line("training", "blue", data=self._learn_loss[skip:])
         plot.line("validation", "red", data=self._valid_loss[skip:])
         plot.wait()

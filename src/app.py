@@ -100,7 +100,7 @@ def iris_no_target() -> tuple[Dataset, MLAlgorithm, Any]:
 
 if __name__ == "__main__":
     np.set_printoptions(linewidth=np.inf, formatter={'float': '{:>10.5f}'.format})
-    rand = np.random.randint(0, 4294967295)
+    rand = np.random.randint(0, (1 << 31) - 1)
     #rand = 2205910060  # LiR for power_plant
     #rand = 347617386   # LoR for electrical_grid
     #rand = 834535453   # LoR for heart
