@@ -103,6 +103,7 @@ if __name__ == "__main__":
     rand = np.random.randint(0, 4294967295)
     #rand = 1997847910  # LiR for power_plant
     #rand = 347617386   # LoR for electrical_grid
+    #rand = 834535453   # LoR for heart
     #rand = 1793295160  # MLP for iris
     #rand = 2914000170  # MLP for frogs
     #rand = 885416001   # KMe for frogs_no_target
