@@ -90,8 +90,9 @@ class MLAlgorithm(ABC):
             print(f"Accuracy   : {conf.accuracy():0.5f} - classes {conf.accuracy_per_class()}")
             print(f"Precision  : {conf.precision():0.5f} - classes {conf.precision_per_class()}")
             print(f"Recall     : {conf.recall():0.5f} - classes {conf.recall_per_class()}")
-            print(f"F1 score   : {conf.f1_score():0.5f} - classes {conf.f1_score_per_class()}")
             print(f"Specificity: {conf.specificity():0.5f} - classes {conf.specificity_per_class()}")
+            print(f"Cohen Kappa: {conf.cohen_kappa():0.5f} - classes {conf.cohen_kappa_per_class()}")
+            print(f"F1 score   : {conf.f1_score():0.5f} - classes {conf.f1_score_per_class()}")
 
     def test_confusion_matrix(self) -> ConfusionMatrix:
         if self._target_type != TargetType.Classification\

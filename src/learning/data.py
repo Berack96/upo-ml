@@ -132,6 +132,7 @@ class ConfusionMatrix:
         self.matrix = conf_matrix
         self.classes = classes
         self.total = dataset_y.shape[0]
+        self.weights = np.sum(conf_matrix, axis=1)
         self.tp = np.diagonal(conf_matrix)
         self.fp = np.sum(conf_matrix, axis=0) - self.tp
         self.fn = np.sum(conf_matrix, axis=1) - self.tp
@@ -152,33 +153,39 @@ class ConfusionMatrix:
     def recall_per_class(self) -> np.ndarray:
         return self.divide_ignore_zero(self.tp, self.tp + self.fn)
 
+    def specificity_per_class(self) -> np.ndarray:
+        return self.divide_ignore_zero(self.tn, self.tn + self.fp)
+
+    def cohen_kappa_per_class(self) -> np.ndarray:
+        p_pl = (self.tp + self.fn) * (self.tp + self.fp) / (self.total ** 2)
+        p_ne = (self.tn + self.fp) * (self.tn + self.fn) / (self.total ** 2)
+        p = p_pl + p_ne
+        return (self.accuracy_per_class() - p) / (1 - p)
+
     def f1_score_per_class(self) -> np.ndarray:
         prec = self.precision_per_class()
         rec = self.recall_per_class()
         return self.divide_ignore_zero(2 * prec * rec, prec + rec)
-
-    def specificity_per_class(self) -> np.ndarray:
-        return self.divide_ignore_zero(self.tn, self.tn + self.fp)
 
     def accuracy(self) -> float:
         return self.tp.sum() / self.total
 
     def precision(self) -> float:
         precision_per_class = self.precision_per_class()
-        support = np.sum(self.matrix, axis=1)
-        return np.average(precision_per_class, weights=support)
+        return np.average(precision_per_class, weights=self.weights)
 
     def recall(self) -> float:
         recall_per_class = self.recall_per_class()
-        support = np.sum(self.matrix, axis=1)
-        return np.average(recall_per_class, weights=support)
-
-    def f1_score(self) -> float:
-        f1_per_class = self.f1_score_per_class()
-        support = np.sum(self.matrix, axis=1)
-        return np.average(f1_per_class, weights=support)
+        return np.average(recall_per_class, weights=self.weights)
 
     def specificity(self) -> float:
         specificity_per_class = self.specificity_per_class()
-        support = np.sum(self.matrix, axis=1)
-        return np.average(specificity_per_class, weights=support)
+        return np.average(specificity_per_class, weights=self.weights)
+
+    def f1_score(self) -> float:
+        f1_per_class = self.f1_score_per_class()
+        return np.average(f1_per_class, weights=self.weights)
+
+    def cohen_kappa(self) -> float:
+        kappa_per_class = self.cohen_kappa_per_class()
+        return np.average(kappa_per_class, weights=self.weights)
