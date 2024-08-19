@@ -25,7 +25,7 @@ def auto_mpg() -> tuple[Dataset, MLAlgorithm, Any]:
     ds.numbers(["HP"])
     ds.handle_na()
     ds.normalize(excepts=["Cylinders","Year","Origin"])
-    return (ds, LinearRegression(ds, learning_rate=0.0001), sklearn.linear_model.LinearRegression())
+    return (ds, LinearRegression(ds, learning_rate=0.0001), sklearn.linear_model.SGDRegressor())
 
 def automobile() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(REGRESSION + "automobile.csv", "symboling", TargetType.Regression)
@@ -35,12 +35,12 @@ def automobile() -> tuple[Dataset, MLAlgorithm, Any]:
     ds.numbers(["normalized-losses", "bore", "stroke", "horsepower", "peak-rpm", "price"])
     ds.handle_na()
     ds.normalize(excepts=attributes_to_modify)
-    return (ds, LinearRegression(ds, learning_rate=0.004), sklearn.linear_model.LinearRegression())
+    return (ds, LinearRegression(ds, learning_rate=0.003), sklearn.linear_model.SGDRegressor())
 
 def power_plant() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(REGRESSION + "power-plant.csv", "energy-output", TargetType.Regression)
-    ds.normalize()
-    return (ds, LinearRegression(ds, learning_rate=0.1), sklearn.linear_model.LinearRegression())
+    ds.normalize(excepts=None)
+    return (ds, LinearRegression(ds, learning_rate=0.1), sklearn.linear_model.SGDRegressor())
 
 # ********************
 # Logistic Regression
@@ -101,7 +101,7 @@ def iris_no_target() -> tuple[Dataset, MLAlgorithm, Any]:
 if __name__ == "__main__":
     np.set_printoptions(linewidth=np.inf, formatter={'float': '{:>10.5f}'.format})
     rand = np.random.randint(0, 4294967295)
-    #rand = 1997847910  # LiR for power_plant
+    #rand = 2205910060  # LiR for power_plant
     #rand = 347617386   # LoR for electrical_grid
     #rand = 1793295160  # MLP for iris
     #rand = 2914000170  # MLP for frogs
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     np.random.seed(rand)
     print(f"Using seed: {rand}")
 
-    ds, ml, sk = frogs()
+    ds, ml, sk = power_plant()
 
     epochs, _, _ = ml.learn(1000, verbose=True)
     ml.display_results()

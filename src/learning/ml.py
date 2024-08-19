@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from plot import Plot
 from tqdm import tqdm
 from learning.data import ConfusionMatrix, Dataset, Data, TargetType
-from learning.functions import r_squared
+from learning.functions import pearson, r_squared
 
 class MLAlgorithm(ABC):
     """ Classe generica per gli algoritmi di Machine Learning """
@@ -83,6 +83,7 @@ class MLAlgorithm(ABC):
         print(f"Loss valid : {self.validation_loss():0.5f}")
         print(f"Loss test  : {self.test_loss():0.5f}")
         if self._target_type == TargetType.Regression:
+            print(f"Pearson    : {self.test_pearson():0.5f}")
             print(f"R^2        : {self.test_r_squared():0.5f}")
         elif self._target_type != TargetType.NoTarget:
             conf = self.test_confusion_matrix()
@@ -105,6 +106,11 @@ class MLAlgorithm(ABC):
             h0 = np.argmax(h0, axis=1)
             y = np.argmax(y, axis=1)
         return ConfusionMatrix(y, h0)
+
+    def test_pearson(self) -> float:
+        if self._target_type != TargetType.Regression:
+            return 0
+        return pearson(self._h0(self._testset.x), self._testset.y)
 
     def test_r_squared(self) -> float:
         if self._target_type != TargetType.Regression:

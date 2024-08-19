@@ -19,11 +19,13 @@ class GradientDescent(MLAlgorithm):
 
     def _learning_step(self) -> float:
         x, y, m, _ = self._learnset.as_tuple()
+        h0 = self._h0(x)
 
         regularization = (self.lambd / m) * self.theta
         regularization[0] = 0
-        derivative = self.alpha * np.mean((self._h0(x) - y) * with_bias(x).T, axis=1)
-        self.theta -= derivative + regularization
+
+        derivative =  np.mean((h0 - y) * with_bias(x).T, axis=1)
+        self.theta -= self.alpha * derivative + regularization
         return self._loss(x, y)
 
     def _predict_loss(self, dataset:Data) -> float:

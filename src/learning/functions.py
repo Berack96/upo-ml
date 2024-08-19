@@ -44,6 +44,13 @@ def cross_entropy_loss(h0:np.ndarray, y:np.ndarray) -> float:
 # Randoms
 # **********
 
+def pearson(h0:np.ndarray, y:np.ndarray) -> float:
+    diff1 = h0 - h0.mean()
+    diff2 = y - y.mean()
+    num = np.sum(diff1 * diff2)
+    den = np.sqrt(np.sum(diff1**2)) * np.sqrt(np.sum(diff2**2))
+    return num / den
+
 def r_squared(h0:np.ndarray, y:np.ndarray) -> float:
     y_mean = np.mean(y)
     ss_resid = np.sum((y - h0) ** 2)

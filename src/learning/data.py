@@ -52,10 +52,8 @@ class Dataset:
 
         for col in self.data:
             if col not in excepts:
-                index = self.data.columns.get_loc(col)
-                datacol = self.data.pop(col)
-                datacol = (datacol - datacol.mean()) / datacol.std()
-                self.data.insert(index, col, datacol)
+                datacol = self.data[col]
+                self.data[col] = (datacol - datacol.mean()) / datacol.std()
         return self
 
     def factorize(self, columns:list[str]=[]) -> Self:
