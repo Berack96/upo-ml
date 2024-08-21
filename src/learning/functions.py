@@ -19,9 +19,10 @@ def lrelu_derivative(x:np.ndarray) -> np.ndarray:
     return np.where(x < 0, LEAKY_RELU, 1)
 
 def softmax(x:np.ndarray) -> np.ndarray:
-    x = x - np.max(x, axis=1, keepdims=True) # for overflow
+    axis = 1 if len(x.shape) != 1 else 0
+    x = x - np.max(x, axis=axis, keepdims=True) # for overflow
     exp_x = np.exp(x)
-    sum_x = np.sum(exp_x, axis=1, keepdims=True)
+    sum_x = np.sum(exp_x, axis=axis, keepdims=True)
     return exp_x / sum_x
 def softmax_derivative(h0:np.ndarray, y:np.ndarray) -> np.ndarray:
     return h0 - y
@@ -58,5 +59,6 @@ def r_squared(h0:np.ndarray, y:np.ndarray) -> float:
     return 1 - (ss_resid / ss_total)
 
 def with_bias(x:np.ndarray) -> np.ndarray:
-    ones = np.ones(shape=(x.shape[0], 1))
-    return np.hstack([x, ones])
+    shape = (x.shape[0], 1) if len(x.shape) != 1 else (1,)
+    ones = np.ones(shape)
+    return np.hstack([ones, x])

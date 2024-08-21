@@ -50,6 +50,7 @@ class MLAlgorithm(ABC):
                 if valid_loss < best[0]:
                     best = (valid_loss, self._get_parameters())
 
+                if np.isnan(learn_loss) or np.isnan(valid_loss): break
                 learn.append(learn_loss)
                 valid.append(valid_loss)
                 if verbose: trange.set_postfix({"learn": f"{learn[-1]:2.5f}", "validation": f"{valid[-1]:2.5f}"})
@@ -82,17 +83,15 @@ class MLAlgorithm(ABC):
         print(f"Loss learn : {self.learning_loss():0.5f}")
         print(f"Loss valid : {self.validation_loss():0.5f}")
         print(f"Loss test  : {self.test_loss():0.5f}")
+        print("========================")
         if self._target_type == TargetType.Regression:
             print(f"Pearson    : {self.test_pearson():0.5f}")
             print(f"R^2        : {self.test_r_squared():0.5f}")
+            print("========================")
         elif self._target_type != TargetType.NoTarget:
             conf = self.test_confusion_matrix()
-            print(f"Accuracy   : {conf.accuracy():0.5f} - classes {conf.accuracy_per_class()}")
-            print(f"Precision  : {conf.precision():0.5f} - classes {conf.precision_per_class()}")
-            print(f"Recall     : {conf.recall():0.5f} - classes {conf.recall_per_class()}")
-            print(f"Specificity: {conf.specificity():0.5f} - classes {conf.specificity_per_class()}")
-            print(f"Cohen Kappa: {conf.cohen_kappa():0.5f} - classes {conf.cohen_kappa_per_class()}")
-            print(f"F1 score   : {conf.f1_score():0.5f} - classes {conf.f1_score_per_class()}")
+            conf.print()
+            print("========================")
 
     def test_confusion_matrix(self) -> ConfusionMatrix:
         if self._target_type != TargetType.Classification\
@@ -103,9 +102,7 @@ class MLAlgorithm(ABC):
         y = self._testset.y
         if h0.ndim == 1:
             h0 = np.where(h0 > 0.5, 1, 0)
-        else:
-            h0 = np.argmax(h0, axis=1)
-            y = np.argmax(y, axis=1)
+
         return ConfusionMatrix(y, h0)
 
     def test_pearson(self) -> float:

@@ -66,8 +66,8 @@ class MultiLayerPerceptron(MLAlgorithm):
         input = self._learnset.x.shape[1]
         output = self._learnset.y.shape[1]
 
-        if type(layers) is not list[int]:
-            layers = [4, 3, output]
+        if not all(isinstance(x, int) for x in layers):
+            raise Exception("The list of layers must oly be of integers!")
         else: layers.append(output)
 
         self.layers = []
@@ -90,6 +90,9 @@ class MultiLayerPerceptron(MLAlgorithm):
             self.activations.append(x) # saving activation result
         return softmax(x)
 
+    def _predict_loss(self, dataset:Data) -> float:
+        return cross_entropy_loss(self._h0(dataset.x), dataset.y)
+
     def _learning_step(self) -> float:
         x, y, m, _ = self._learnset.as_tuple()
         delta = softmax_derivative(self._h0(x), y)
@@ -100,16 +103,13 @@ class MultiLayerPerceptron(MLAlgorithm):
             deltaW *= self.learning_rate
             deltaW += self.momentum * self.previous_delta[l]
 
-            delta = np.dot(delta, self.layers[l][:-1].T) # ignoring bias
+            delta = np.dot(delta, self.layers[l][1:].T) # ignoring bias
             delta *= lrelu_derivative(activation)
 
             self.layers[l] -= deltaW
             self.previous_delta[l] = deltaW
 
         return self._predict_loss(self._learnset)
-
-    def _predict_loss(self, dataset:Data) -> float:
-        return cross_entropy_loss(self._h0(dataset.x), dataset.y)
 
     def _get_parameters(self):
         parameters = { 'layers': [], 'previous_delta': [] }

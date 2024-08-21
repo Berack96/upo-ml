@@ -7,7 +7,7 @@ import sklearn.neural_network
 
 from typing import Any
 from learning.ml import MLAlgorithm
-from learning.data import Dataset, TargetType
+from learning.data import ConfusionMatrix, Dataset, TargetType
 from learning.supervised import LinearRegression, LogisticRegression, MultiLayerPerceptron
 from learning.unsupervised import KMeans
 
@@ -24,7 +24,7 @@ def auto_mpg() -> tuple[Dataset, MLAlgorithm, Any]:
 
     ds.numbers(["HP"])
     ds.handle_na()
-    ds.normalize(excepts=["Cylinders","Year","Origin"])
+    ds.standardize(excepts=["Cylinders","Year","Origin"])
     return (ds, LinearRegression(ds, learning_rate=0.0001), sklearn.linear_model.SGDRegressor())
 
 def automobile() -> tuple[Dataset, MLAlgorithm, Any]:
@@ -34,12 +34,12 @@ def automobile() -> tuple[Dataset, MLAlgorithm, Any]:
     ds.factorize(attributes_to_modify)
     ds.numbers(["normalized-losses", "bore", "stroke", "horsepower", "peak-rpm", "price"])
     ds.handle_na()
-    ds.normalize(excepts=attributes_to_modify)
+    ds.standardize(excepts=attributes_to_modify)
     return (ds, LinearRegression(ds, learning_rate=0.003), sklearn.linear_model.SGDRegressor())
 
 def power_plant() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(REGRESSION + "power-plant.csv", "energy-output", TargetType.Regression)
-    ds.normalize(excepts=None)
+    ds.standardize(excepts=None)
     return (ds, LinearRegression(ds, learning_rate=0.1), sklearn.linear_model.SGDRegressor())
 
 # ********************
@@ -49,31 +49,39 @@ def power_plant() -> tuple[Dataset, MLAlgorithm, Any]:
 def electrical_grid() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(CLASSIFICATION + "electrical_grid.csv", "stabf", TargetType.Classification)
     ds.factorize(["stabf"])
-    ds.normalize()
+    ds.standardize()
     return (ds, LogisticRegression(ds, learning_rate=100), sklearn.linear_model.LogisticRegression())
 
 def heart() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(CLASSIFICATION + "heart.csv", "Disease", TargetType.Classification)
     attributes_to_modify = ["Disease", "Sex", "ChestPainType"]
     ds.factorize(attributes_to_modify)
-    ds.normalize(excepts=attributes_to_modify)
+    ds.standardize(excepts=attributes_to_modify)
     return (ds, LogisticRegression(ds, learning_rate=0.01), sklearn.linear_model.LogisticRegression())
 
 # ********************
 # MultiLayerPerceptron
 # ********************
 
+def electrical_grid_mlp() -> tuple[Dataset, MLAlgorithm, Any]:
+    ds = Dataset(CLASSIFICATION + "electrical_grid.csv", "stabf", TargetType.MultiClassification)
+    ds.factorize(["stabf"])
+    ds.standardize()
+    size = [4, 3]
+    return (ds, MultiLayerPerceptron(ds, size, 0.08), sklearn.neural_network.MLPClassifier(size, 'relu'))
+
 def frogs() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(CLASSIFICATION + "frogs.csv", "Species", TargetType.MultiClassification)
     ds.remove(["Family", "Genus", "RecordID"])
     ds.factorize(["Species"])
-    size = [18, 15, 12, 10, 8]
-    return (ds, MultiLayerPerceptron(ds, size), sklearn.neural_network.MLPClassifier(size, 'relu'))
+    ds.standardize()
+    size = [18, 15, 12]
+    return (ds, MultiLayerPerceptron(ds, size, 0.047), sklearn.neural_network.MLPClassifier(size, 'relu'))
 
 def iris() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(CLASSIFICATION + "iris.csv", "Class", TargetType.MultiClassification)
     ds.factorize(["Class"])
-    ds.normalize()
+    ds.standardize()
     size = [4, 3]
     return (ds, MultiLayerPerceptron(ds, size), sklearn.neural_network.MLPClassifier(size, 'relu'))
 
@@ -90,7 +98,7 @@ def frogs_no_target() -> tuple[Dataset, MLAlgorithm, Any]:
 def iris_no_target() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(CLASSIFICATION + "iris.csv", "Class", TargetType.NoTarget)
     ds.remove(["Class"])
-    ds.normalize()
+    ds.standardize()
     clusters = 3
     return (ds, KMeans(ds, clusters), sklearn.cluster.KMeans(clusters))
 
@@ -121,6 +129,9 @@ if __name__ == "__main__":
     sk.set_params(max_iter=epochs)
     sk.fit(learn.x, learn.y)
     print(f"Sklearn    : {abs(sk.score(test.x, test.y)):0.5f}")
+    if ds.target_type == TargetType.Classification or ds.target_type == TargetType.MultiClassification:
+        conf = ConfusionMatrix(test.y, sk.predict(test.x))
+        conf.print()
     print("========================")
 
     ml.plot()

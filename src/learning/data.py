@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 
 from enum import Enum
+import sklearn
+import sklearn.metrics
 from typing_extensions import Self
 
 class TargetType(Enum):
@@ -46,7 +48,7 @@ class Dataset:
             self.data.pop(col)
         return self
 
-    def normalize(self, excepts:list[str]=[]) -> Self:
+    def standardize(self, excepts:list[str]=[]) -> Self:
         if excepts is None: excepts = []
         else: excepts.append(self.target)
 
@@ -81,48 +83,67 @@ class Dataset:
         splitted = [data[ data[:,0] == k ] for k in classes ]
         total_each = np.average([len(x) for x in splitted]).astype(int)
 
-        seed = np.random.randint(0, 4294967295)
-        rng = np.random.default_rng(seed)
         data = []
         for x in splitted:
-            samples = rng.choice(x, size=total_each, replace=True, shuffle=False)
-            data.append(samples)
+            total = total_each - x.shape[0]
+            data.append(x)
+            if total > 0:
+                samples = np.random.choice(x, size=total, replace=True)
+                data.append(samples)
 
         return np.concatenate(data, axis=0)
 
-    def split_data_target(self, data:np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def split_data_target(self, data:np.ndarray) -> Data:
         target = data[:, 0] if self.target_type != TargetType.NoTarget else None
         data = data[:, 1:]
         if self.target_type == TargetType.MultiClassification:
             target = target.astype(int)
             uniques = np.unique(target).shape[0]
             target = np.eye(uniques)[target]
-        return (data, target)
+        return Data(data, target)
 
-    def get_dataset(self, test_frac:float=0.2, valid_frac:float=0.2) -> tuple[Data, Data, Data]:
-        data = self.data.to_numpy()
-        data = self.prepare_classification(data)
-
-        np.random.shuffle(data)
-
+    def split_dataset(self, data:np.ndarray, valid_frac:float, test_frac:float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         total = data.shape[0]
         valid_cutoff = int(total * valid_frac)
         test_cutoff = int(total * test_frac) + valid_cutoff
 
+        learn = data[test_cutoff:]
         valid = data[:valid_cutoff]
         test = data[valid_cutoff:test_cutoff]
-        learn = data[test_cutoff:]
+        return (learn, valid, test)
 
-        l = []
-        for data in [learn, test, valid]:
-            data, target = self.split_data_target(data)
-            l.append(Data(data, target))
-        return l
+
+    def get_dataset(self, test_frac:float=0.2, valid_frac:float=0.2) -> tuple[Data, Data, Data]:
+        data = self.data.to_numpy()
+        max_iter = 10
+        while max_iter > 0:
+            max_iter -= 1
+            try:
+                np.random.shuffle(data)
+                learn, valid, test = self.split_dataset(data, valid_frac, test_frac)
+
+                if self.target_type == TargetType.Regression or self.target_type == TargetType.NoTarget:
+                    learn = self.prepare_classification(learn)
+                    valid = self.prepare_classification(valid)
+                    test = self.prepare_classification(test)
+
+                learn = self.split_data_target(learn)
+                valid = self.split_data_target(valid)
+                test = self.split_data_target(test)
+                return (learn, valid, test)
+            except:
+                if max_iter == 0:
+                    raise Exception("Could not split dataset evenly for the classes, try again with another seed or add more cases in the dataset")
 
 class ConfusionMatrix:
     matrix:np.ndarray
 
     def __init__(self, dataset_y: np.ndarray, predictions_y:np.ndarray) -> None:
+        if len(dataset_y.shape) > 1:
+            dataset_y = np.argmax(dataset_y, axis=1)
+        if len(predictions_y.shape) > 1:
+            predictions_y = np.argmax(predictions_y, axis=1)
+
         classes = len(np.unique(dataset_y))
         conf_matrix = np.zeros((classes, classes), dtype=int)
 
@@ -137,6 +158,7 @@ class ConfusionMatrix:
         self.fp = np.sum(conf_matrix, axis=0) - self.tp
         self.fn = np.sum(conf_matrix, axis=1) - self.tp
         self.tn = self.total - (self.tp + self.fp + self.fn)
+        self.kappa = sklearn.metrics.cohen_kappa_score(dataset_y, predictions_y)
 
     def divide_ignore_zero(self, a:np.ndarray, b:np.ndarray) -> np.ndarray:
         with np.errstate(divide='ignore', invalid='ignore'):
@@ -155,12 +177,6 @@ class ConfusionMatrix:
 
     def specificity_per_class(self) -> np.ndarray:
         return self.divide_ignore_zero(self.tn, self.tn + self.fp)
-
-    def cohen_kappa_per_class(self) -> np.ndarray:
-        p_pl = (self.tp + self.fn) * (self.tp + self.fp) / (self.total ** 2)
-        p_ne = (self.tn + self.fp) * (self.tn + self.fn) / (self.total ** 2)
-        p = p_pl + p_ne
-        return (self.accuracy_per_class() - p) / (1 - p)
 
     def f1_score_per_class(self) -> np.ndarray:
         prec = self.precision_per_class()
@@ -187,5 +203,12 @@ class ConfusionMatrix:
         return np.average(f1_per_class, weights=self.weights)
 
     def cohen_kappa(self) -> float:
-        kappa_per_class = self.cohen_kappa_per_class()
-        return np.average(kappa_per_class, weights=self.weights)
+        return self.kappa
+
+    def print(self)-> None:
+        print(f"Cohen Kappa: {self.cohen_kappa():0.5f}")
+        print(f"Accuracy   : {self.accuracy():0.5f} - classes {self.accuracy_per_class()}")
+        print(f"Precision  : {self.precision():0.5f} - classes {self.precision_per_class()}")
+        print(f"Recall     : {self.recall():0.5f} - classes {self.recall_per_class()}")
+        print(f"Specificity: {self.specificity():0.5f} - classes {self.specificity_per_class()}")
+        print(f"F1 score   : {self.f1_score():0.5f} - classes {self.f1_score_per_class()}")
