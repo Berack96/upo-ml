@@ -40,8 +40,9 @@ class Dataset:
         self.target_type = target_type
 
         # move target to the start
-        col_target = self.data.pop(target)
-        self.data.insert(0, target, col_target)
+        if target_type != TargetType.NoTarget:
+            col_target = self.data.pop(target)
+            self.data.insert(0, target, col_target)
 
     def remove(self, columns:list[str]) -> Self:
         for col in columns:
@@ -85,17 +86,14 @@ class Dataset:
 
         data = []
         for x in splitted:
-            total = total_each - x.shape[0]
-            data.append(x)
-            if total > 0:
-                samples = np.random.choice(x, size=total, replace=True)
-                data.append(samples)
+            samples = np.random.choice(len(x), size=total_each, replace=True)
+            data.append(x[samples])
 
         return np.concatenate(data, axis=0)
 
-    def split_data_target(self, data:np.ndarray) -> Data:
+    def split_dataset_target(self, data:np.ndarray) -> Data:
         target = data[:, 0] if self.target_type != TargetType.NoTarget else None
-        data = data[:, 1:]
+        data = data[:, 1:] if self.target_type != TargetType.NoTarget else data
         if self.target_type == TargetType.MultiClassification:
             target = target.astype(int)
             uniques = np.unique(target).shape[0]
@@ -122,14 +120,15 @@ class Dataset:
                 np.random.shuffle(data)
                 learn, valid, test = self.split_dataset(data, valid_frac, test_frac)
 
-                if self.target_type == TargetType.Regression or self.target_type == TargetType.NoTarget:
+                if self.target_type == TargetType.Classification\
+                or self.target_type == TargetType.MultiClassification:
                     learn = self.prepare_classification(learn)
                     valid = self.prepare_classification(valid)
                     test = self.prepare_classification(test)
 
-                learn = self.split_data_target(learn)
-                valid = self.split_data_target(valid)
-                test = self.split_data_target(test)
+                learn = self.split_dataset_target(learn)
+                valid = self.split_dataset_target(valid)
+                test = self.split_dataset_target(test)
                 return (learn, valid, test)
             except:
                 if max_iter == 0:

@@ -2,12 +2,14 @@ import numpy as np
 import sklearn
 import sklearn.cluster
 import sklearn.linear_model
+import sklearn.metrics
 import sklearn.model_selection
 import sklearn.neural_network
 
 from typing import Any
+from learning.functions import print_metrics
 from learning.ml import MLAlgorithm
-from learning.data import ConfusionMatrix, Dataset, TargetType
+from learning.data import Dataset, TargetType
 from learning.supervised import LinearRegression, LogisticRegression, MultiLayerPerceptron
 from learning.unsupervised import KMeans
 
@@ -68,15 +70,15 @@ def electrical_grid_mlp() -> tuple[Dataset, MLAlgorithm, Any]:
     ds.factorize(["stabf"])
     ds.standardize()
     size = [4, 3]
-    return (ds, MultiLayerPerceptron(ds, size, 0.08), sklearn.neural_network.MLPClassifier(size, 'relu'))
+    return (ds, MultiLayerPerceptron(ds, size, 0.05), sklearn.neural_network.MLPClassifier(size, 'relu'))
 
 def frogs() -> tuple[Dataset, MLAlgorithm, Any]:
-    ds = Dataset(CLASSIFICATION + "frogs.csv", "Species", TargetType.MultiClassification)
-    ds.remove(["Family", "Genus", "RecordID"])
-    ds.factorize(["Species"])
+    ds = Dataset(CLASSIFICATION + "frogs.csv", "Family", TargetType.MultiClassification)
+    ds.remove(["Species", "Genus", "RecordID"])
+    ds.factorize(["Family"])
     ds.standardize()
-    size = [18, 15, 12]
-    return (ds, MultiLayerPerceptron(ds, size, 0.047), sklearn.neural_network.MLPClassifier(size, 'relu'))
+    size = [18, 12, 8]
+    return (ds, MultiLayerPerceptron(ds, size, 0.02), sklearn.neural_network.MLPClassifier(size, 'relu'))
 
 def iris() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(CLASSIFICATION + "iris.csv", "Class", TargetType.MultiClassification)
@@ -90,15 +92,14 @@ def iris() -> tuple[Dataset, MLAlgorithm, Any]:
 # ********************
 
 def frogs_no_target() -> tuple[Dataset, MLAlgorithm, Any]:
-    ds = Dataset(CLASSIFICATION + "frogs.csv", "Species", TargetType.NoTarget)
+    ds = Dataset(CLASSIFICATION + "frogs.csv", "Family", TargetType.NoTarget)
     ds.remove(["Family", "Genus", "RecordID", "Species"])
-    clusters = 10
+    clusters = 4
     return (ds, KMeans(ds, clusters), sklearn.cluster.KMeans(clusters))
 
 def iris_no_target() -> tuple[Dataset, MLAlgorithm, Any]:
     ds = Dataset(CLASSIFICATION + "iris.csv", "Class", TargetType.NoTarget)
     ds.remove(["Class"])
-    ds.standardize()
     clusters = 3
     return (ds, KMeans(ds, clusters), sklearn.cluster.KMeans(clusters))
 
@@ -113,8 +114,8 @@ if __name__ == "__main__":
     #rand = 347617386   # LoR for electrical_grid
     #rand = 834535453   # LoR for heart
     #rand = 1793295160  # MLP for iris
-    #rand = 2914000170  # MLP for frogs
-    #rand = 885416001   # KMe for frogs_no_target
+    #rand = 629702080   # MLP for frogs
+    #rand = 1038336550  # KMe for frogs_no_target
 
     np.random.seed(rand)
     print(f"Using seed: {rand}")
@@ -129,9 +130,6 @@ if __name__ == "__main__":
     sk.set_params(max_iter=epochs)
     sk.fit(learn.x, learn.y)
     print(f"Sklearn    : {abs(sk.score(test.x, test.y)):0.5f}")
-    if ds.target_type == TargetType.Classification or ds.target_type == TargetType.MultiClassification:
-        conf = ConfusionMatrix(test.y, sk.predict(test.x))
-        conf.print()
-    print("========================")
+    print_metrics(ml._target_type, test, sk.predict(test.x))
 
     ml.plot()

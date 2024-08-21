@@ -2,10 +2,11 @@ import sys
 import numpy as np
 
 from abc import ABC, abstractmethod
+
 from plot import Plot
 from tqdm import tqdm
-from learning.data import ConfusionMatrix, Dataset, Data, TargetType
-from learning.functions import pearson, r_squared
+from learning.data import Dataset, Data, TargetType
+from learning.functions import print_metrics
 
 class MLAlgorithm(ABC):
     """ Classe generica per gli algoritmi di Machine Learning """
@@ -84,36 +85,7 @@ class MLAlgorithm(ABC):
         print(f"Loss valid : {self.validation_loss():0.5f}")
         print(f"Loss test  : {self.test_loss():0.5f}")
         print("========================")
-        if self._target_type == TargetType.Regression:
-            print(f"Pearson    : {self.test_pearson():0.5f}")
-            print(f"R^2        : {self.test_r_squared():0.5f}")
-            print("========================")
-        elif self._target_type != TargetType.NoTarget:
-            conf = self.test_confusion_matrix()
-            conf.print()
-            print("========================")
-
-    def test_confusion_matrix(self) -> ConfusionMatrix:
-        if self._target_type != TargetType.Classification\
-        and self._target_type != TargetType.MultiClassification:
-            return None
-
-        h0 = self._h0(self._testset.x)
-        y = self._testset.y
-        if h0.ndim == 1:
-            h0 = np.where(h0 > 0.5, 1, 0)
-
-        return ConfusionMatrix(y, h0)
-
-    def test_pearson(self) -> float:
-        if self._target_type != TargetType.Regression:
-            return 0
-        return pearson(self._h0(self._testset.x), self._testset.y)
-
-    def test_r_squared(self) -> float:
-        if self._target_type != TargetType.Regression:
-            return 0
-        return r_squared(self._h0(self._testset.x), self._testset.y)
+        print_metrics(self._target_type, self._testset, self._h0(self._testset.x))
 
     @abstractmethod
     def _h0(self, x:np.ndarray) -> np.ndarray: pass

@@ -16,6 +16,17 @@ class KMeans(MLAlgorithm):
         distances = np.linalg.norm(diff, axis=2)
         return np.argmin(distances, axis=1)
 
+    def _predict_loss(self, dataset:Data) -> float:
+        assignments = self._h0(dataset.x)
+        loss = 0.0
+
+        for k in range(self.total):
+            assigned_points = dataset.x[assignments == k]
+            if len(assigned_points) > 0:
+                diff = assigned_points - self.centroids[k]
+                loss += np.sum(np.linalg.norm(diff, axis=1) ** 2)
+        return loss
+
     def _learning_step(self) -> float:
         assignments = self._h0(self._learnset.x)
         centroids = []
@@ -32,16 +43,6 @@ class KMeans(MLAlgorithm):
         self.centroids = np.array(centroids)
         return self._predict_loss(self._learnset)
 
-    def _predict_loss(self, dataset:Data) -> float:
-        assignments = self._h0(dataset.x)
-        loss = 0.0
-
-        for k in range(self.total):
-            assigned_points = dataset.x[assignments == k]
-            if len(assigned_points) > 0:
-                diff = assigned_points - self.centroids[k]
-                loss += np.sum(np.linalg.norm(diff, axis=1) ** 2)
-        return loss
 
     def _get_parameters(self):
         return self.centroids.copy()
