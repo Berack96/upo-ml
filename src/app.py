@@ -114,13 +114,13 @@ if __name__ == "__main__":
     #rand = 347617386   # LoR for electrical_grid
     #rand = 834535453   # LoR for heart
     #rand = 1793295160  # MLP for iris
-    #rand = 629702080   # MLP for frogs
+    #rand = 772284034   # MLP for frogs
     #rand = 1038336550  # KMe for frogs_no_target
 
     np.random.seed(rand)
     print(f"Using seed: {rand}")
 
-    ds, ml, sk = power_plant()
+    ds, ml, sk = frogs()
 
     epochs, _, _ = ml.learn(1000, verbose=True)
     ml.display_results()

@@ -85,8 +85,9 @@ class MultiLayerPerceptron(MLAlgorithm):
     def _h0(self, x:np.ndarray) -> np.ndarray:
         self.activations = [x]
 
-        for layer in self.layers:
-            x = lrelu(with_bias(x).dot(layer))
+        for i, layer in enumerate(self.layers):
+            x = with_bias(x).dot(layer)
+            if i + 1 < len(self.layers): x = lrelu(x)
             self.activations.append(x) # saving activation result
         return softmax(x)
 

@@ -1,3 +1,7 @@
+keras
+jax[cuda12]
+pydot
+
 matplotlib
 pandas
 tqdm
